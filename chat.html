@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chat — Luvuyo</title>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    /* ── Chat-specific styles ── */
+    .chat-wrapper {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 68px);
+      max-width: 780px;
+      padding: 2rem 3rem 0;
+    }
+
+    .chat-header {
+      margin-bottom: 1.5rem;
+      flex-shrink: 0;
+    }
+
+    /* The scrollable message area */
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      padding-bottom: 1rem;
+    }
+
+    /* Each message bubble */
+    .message {
+      max-width: 75%;
+      padding: 0.9rem 1.2rem;
+      border-radius: 12px;
+      font-size: 0.97rem;
+      line-height: 1.7;
+    }
+
+    /* User message — right side */
+    .message.user {
+      background: var(--accent);
+      color: #fff;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+
+    /* Assistant message — left side */
+    .message.assistant {
+      background: var(--bg2);
+      color: var(--text);
+      align-self: flex-start;
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+
+    /* Typing indicator dots */
+    .typing {
+      display: flex;
+      gap: 5px;
+      padding: 1rem 1.2rem;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      border-bottom-left-radius: 4px;
+      align-self: flex-start;
+      width: fit-content;
+    }
+    .typing span {
+      width: 7px;
+      height: 7px;
+      background: var(--muted);
+      border-radius: 50%;
+      animation: bounce 1.2s infinite;
+    }
+    .typing span:nth-child(2) { animation-delay: 0.2s; }
+    .typing span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-6px); }
+    }
+
+    /* Input area at the bottom */
+    .chat-input-area {
+      display: flex;
+      gap: 0.8rem;
+      padding: 1.2rem 0 1.5rem;
+      flex-shrink: 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .chat-input {
+      flex: 1;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.8rem 1.2rem;
+      border-radius: 10px;
+      font-size: 0.97rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+      resize: none;
+      height: 48px;
+    }
+    .chat-input:focus { border-color: var(--accent2); }
+    .chat-input::placeholder { color: var(--muted); }
+
+    .send-btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 0 1.4rem;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+    .send-btn:hover { background: #5a52e0; }
+    .send-btn:disabled { background: var(--border); cursor: not-allowed; }
+
+    /* Suggested starter questions */
+    .suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      margin-bottom: 1.5rem;
+    }
+    .suggestion {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .suggestion:hover { border-color: var(--accent2); color: var(--accent2); }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a class="logo" href="index.html">LM</a>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="about.html">About</a></li>
+      <li><a href="skills.html">Skills</a></li>
+      <li><a href="projects.html">Projects</a></li>
+      <li><a href="contact.html">Contact</a></li>
+      <li><a href="chat.html">Chat</a></li>
+    </ul>
+  </nav>
+
+  <div class="chat-wrapper">
+
+    <div class="chat-header">
+      <div class="section-label">Ask me anything</div>
+      <h1 class="page-title">Chat with Luvuyo's AI</h1>
+    </div>
+
+    <!-- Suggested questions -->
+    <div class="suggestions" id="suggestions">
+      <button class="suggestion" onclick="askSuggestion(this)">What projects has Luvuyo built?</button>
+      <button class="suggestion" onclick="askSuggestion(this)">What are Luvuyo's skills?</button>
+      <button class="suggestion" onclick="askSuggestion(this)">Is Luvuyo available for work?</button>
+      <button class="suggestion" onclick="askSuggestion(this)">What is FastAPI?</button>
+      <button class="suggestion" onclick="askSuggestion(this)">How do I learn web development?</button>
+    </div>
+
+    <!-- Messages appear here -->
+    <div class="chat-messages" id="chatMessages">
+      <div class="message assistant">
+        Hi! I'm Luvuyo's AI assistant. Ask me about his background, projects, and skills — or any general software engineering questions. 👋
+      </div>
+    </div>
+
+    <!-- Input area -->
+    <div class="chat-input-area">
+      <textarea
+        class="chat-input"
+        id="chatInput"
+        placeholder="Ask something..."
+        rows="1"
+      ></textarea>
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send</button>
+    </div>
+
+  </div>
+
+  <script src="script.js"></script>
+  <script>
+    // ── State ──
+    const BACKEND_URL = "http://localhost:8000/chat";
+    let history = [];       // stores the conversation so the AI remembers context
+    let isLoading = false;  // prevents sending while a reply is streaming
+
+    // ── DOM elements ──
+    const messagesEl = document.getElementById("chatMessages");
+    const inputEl    = document.getElementById("chatInput");
+    const sendBtn    = document.getElementById("sendBtn");
+    const suggestionsEl = document.getElementById("suggestions");
+
+    // ── Send message when Enter is pressed (Shift+Enter for new line) ──
+    inputEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    // ── Handle suggestion button clicks ──
+    function askSuggestion(btn) {
+      inputEl.value = btn.textContent;
+      suggestionsEl.style.display = "none"; // hide suggestions after first use
+      sendMessage();
+    }
+
+    // ── Add a message bubble to the chat ──
+    function addMessage(role, text) {
+      const div = document.createElement("div");
+      div.classList.add("message", role);
+      div.textContent = text;
+      messagesEl.appendChild(div);
+      scrollToBottom();
+      return div;
+    }
+
+    // ── Show the typing indicator ──
+    function showTyping() {
+      const div = document.createElement("div");
+      div.classList.add("typing");
+      div.id = "typing";
+      div.innerHTML = "<span></span><span></span><span></span>";
+      messagesEl.appendChild(div);
+      scrollToBottom();
+    }
+
+    // ── Remove the typing indicator ──
+    function removeTyping() {
+      const t = document.getElementById("typing");
+      if (t) t.remove();
+    }
+
+    // ── Keep the chat scrolled to the bottom ──
+    function scrollToBottom() {
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    // ── Main send function ──
+    async function sendMessage() {
+      const message = inputEl.value.trim();
+
+      // Don't send empty messages or while loading
+      if (!message || isLoading) return;
+
+      // Clear input and disable button
+      inputEl.value = "";
+      isLoading = true;
+      sendBtn.disabled = true;
+
+      // Show the user's message in the chat
+      addMessage("user", message);
+
+      // Show typing indicator while waiting
+      showTyping();
+
+      try {
+        // Send the message and conversation history to the backend
+        const response = await fetch(BACKEND_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message, history }),
+        });
+
+        // Remove typing indicator
+        removeTyping();
+
+        // Create an empty assistant bubble to stream text into
+        const assistantBubble = addMessage("assistant", "");
+
+        // Read the streamed response chunk by chunk
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let fullReply = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          // Decode the chunk and add it to the bubble
+          const chunk = decoder.decode(value);
+          fullReply += chunk;
+          assistantBubble.textContent = fullReply;
+          scrollToBottom();
+        }
+
+        // Save both messages to history so the AI remembers the conversation
+        history.push({ role: "user",      content: message    });
+        history.push({ role: "assistant", content: fullReply  });
+
+      } catch (error) {
+        removeTyping();
+        addMessage("assistant", "Sorry, I couldn't connect to the backend. Make sure it's running on http://localhost:8000");
+      }
+
+      // Re-enable input
+      isLoading = false;
+      sendBtn.disabled = false;
+      inputEl.focus();
+    }
+  </script>
+
+</body>
+</html>
